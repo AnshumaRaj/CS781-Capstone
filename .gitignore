@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 *.pt
 *.bin
+*.zip
 kaggle.json
 .env
 .ipynb_checkpoints/

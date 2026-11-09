@@ -10,26 +10,25 @@ Repo: https://github.com/AnshumaRaj/CS781-Capstone
 
 | Path | What it is |
 |---|---|
-| `code/Phase1_LegalLM.ipynb` … `Phase7_PCR.ipynb` | Viva notebooks (starter cell layout) |
-| `code/*.py` | Modules the notebooks import |
-| `code/best_submissions/` | **One selected Codabench zip per phase** (Hello IITK uses only these) |
-| `code/all_submissions/` | Every other Codabench / local-run zip from the competition |
+| `code/Phase1_LegalLM.ipynb` … `Phase7_PCR.ipynb` | Viva notebooks for the **selected** model of each phase |
+| `code/*.py` | Modules those notebooks import |
+| `code/phase{1–7}/` | Source for every attempt of that phase (not Codabench zips) |
 | `code/evaluators/` | Local zip checkers |
 | `report/` | LaTeX, figures, PDF |
 
-The Hello IITK zip is `code/` + `report/` at the zip root and contains **only** the seven best zips. Historical attempts live on this GitHub repo.
+Hello IITK is `code/` + `report/` at the zip root: notebooks, selected modules, report. No `submission.zip` files.
 
-## Selected model per phase
+## Selected code per phase
 
-| Phase | Rank (9 Nov 2026) | Zip | Architecture |
+| Phase | Rank (9 Nov 2026) | Code | Architecture |
 |---|---|---|---|
-| 1 Legal LM | 55 | `code/best_submissions/phase1_submission.zip` | efficient, greedy + EOS |
-| 2 NER | 51 | `code/best_submissions/phase2_submission.zip` | efficient full-FT + CRF, 2 seeds |
-| 3 Roles | 39 | `code/best_submissions/phase3_submission.zip` | efficient LoRMA + BiLSTM-CRF |
-| 4 CJPE | 96 | `code/best_submissions/phase4_submission.zip` | efficient partial + ending cue |
-| 5 Statutes | 23 | `code/best_submissions/phase5_submission.zip` | TF-IDF ⊕ efficient windows |
-| 6 Summary | 22 | `code/best_submissions/phase6_submission.zip` | encdec extractive, 720 words |
-| 7 PCR | 33 | `code/best_submissions/phase7_submission.zip` | 8k TF-IDF + cite/head |
+| 1 Legal LM | 55 | `code/Phase1_LegalLM.ipynb`, `code/phase1_models.py` | efficient, greedy + EOS |
+| 2 NER | 51 | `code/Phase2_NER.ipynb`, `code/phase2_lner.py` | efficient full-FT + CRF, 2 seeds |
+| 3 Roles | 39 | `code/Phase3_Roles.ipynb`, `code/phase3_rr_own.py` | efficient LoRMA + BiLSTM-CRF |
+| 4 CJPE | 96 | `code/Phase4_CJPE.ipynb`, `code/phase4_own.py` | efficient partial + ending cue |
+| 5 Statutes | 23 | `code/Phase5_Statutes.ipynb`, `code/phase5_fineblend.py` | TF-IDF ⊕ efficient windows |
+| 6 Summary | 22 | `code/Phase6_Summary.ipynb`, `code/phase6_summ.py` | encdec extractive, 720 words |
+| 7 PCR | 33 | `code/Phase7_PCR.ipynb`, `code/phase7_rerank.py` | 8k TF-IDF + cite/head |
 
 ```
 pip install -r code/requirements.txt

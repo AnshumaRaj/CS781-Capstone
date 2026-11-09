@@ -27,10 +27,7 @@ Shared modules next to the notebooks:
 - `phase6_summ.py` — extractive selector
 - `phase7_rerank.py` — PCR first stage
 
-`evaluators/` checks a `prediction.json` zip.
-
-**Best model (the only zip to use per phase):** `best_submissions/phase{1–7}_submission.zip`  
-Other Codabench attempts live on GitHub under `all_submissions/` (not in this Hello IITK zip).
+`evaluators/` checks a `prediction.json` zip. Prediction zips themselves are not included.
 
 ```
 pip install -r requirements.txt
