@@ -2,28 +2,19 @@
 
 **Anshuman Raj · 240148 · `anshumanr24@iitk.ac.in` · Codabench `a_240148`**
 
-Layout required by Hello IITK: one folder per phase.
+Each phase is **one notebook**, like the official Phase-1 starter. The selected architecture is in the cells of that notebook (no extra `.py` files).
 
 ```
-code/phase1/ … code/phase7/
+code/phase1/Phase1_LegalLM.ipynb
+code/phase2/Phase2_NER.ipynb
+…
+code/phase7/Phase7_PCR.ipynb
 report/CS781-CP-Anshuman-Raj-240148-report.pdf
 ```
 
-| Open this | Phase | Selected architecture |
-|---|---|---|
-| `phase1/Phase1_LegalLM.ipynb` | 1 Legal LM | efficient (RoPE, GQA, SwiGLU), greedy + EOS |
-| `phase2/Phase2_NER.ipynb` | 2 NER | efficient full-FT + CRF |
-| `phase3/Phase3_Roles.ipynb` | 3 Rhetorical roles | efficient LoRMA + BiLSTM-CRF |
-| `phase4/Phase4_CJPE.ipynb` | 4 Judgment prediction | efficient partial FT, windows + ending cue |
-| `phase5/Phase5_Statutes.ipynb` | 5 Statute IDs | per-label head blended with TF-IDF |
-| `phase6/Phase6_Summary.ipynb` | 6 Summarization | encdec extractive, 720-word budget |
-| `phase7/Phase7_PCR.ipynb` | 7 Prior-case retrieval | 8k-word TF-IDF + cite/head fields |
-
-Each `phaseN/` folder is **only the selected run** for that phase: one notebook plus the `.py` files it imports. No other attempts, no Codabench zips.
-
-Keep `RUN_TRAINING = False` unless you are on a Kaggle T4 with the dataset and a Phase-1 checkpoint.
+Keep `RUN_TRAINING = False` unless you are on a Kaggle T4.
 
 ```
-pip install -r phase1/requirements.txt
+pip install -r requirements.txt
 jupyter notebook phase1/Phase1_LegalLM.ipynb
 ```
