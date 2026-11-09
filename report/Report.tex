@@ -52,12 +52,12 @@ Indian legal text is privileged, so I trained the stack on the official CS-781 c
 \medskip
 
 \noindent
-Table~\ref{tab:leaderboard} is the zip I selected for each phase, with rank as shown on the official board (freeze 9~November~2026). I uploaded at least four distinct systems per phase (four Phase-1 architectures, LoRMA, a second PEFT method, and a distilled encoder--decoder).
+Table~\ref{tab:leaderboard} is the system I selected for each phase, with rank as shown on the official board (freeze 9~November~2026). I uploaded at least four distinct systems per phase (four Phase-1 architectures, LoRMA, a second PEFT method, and a distilled encoder--decoder).
 
 \begin{table}[H]
 \centering
 \small
-\caption{Official selected zip per phase. Rank is the live-board rank of that zip on 9~Nov~2026.}
+\caption{Official selected system per phase. Rank is the live-board rank of that system on 9~Nov~2026.}
 \label{tab:leaderboard}
 \begin{tabular}{clccc}
 \toprule
@@ -81,7 +81,7 @@ Phase & Task & Primary metric & Rank & Distinct zips \\
 \section{Introduction and Problem Description}
 A firm that holds Indian judgments cannot send them to a hosted API or initialise from a public legal BERT. I therefore built an in-house pipeline: one foundation family trained only on \texttt{Exploration-Lab/CS-781-Capstone}~\cite{cs781capstone}, then seven heads. Phase~1 continues a legal prompt for up to 128 words. Phase~2 extracts twelve entity types with exact character offsets. Phase~3 labels every provided sentence with one of thirteen rhetorical roles. Phase~4 predicts a binary outcome. Phase~5 assigns a subset of 100 masked statute IDs. Phase~6 writes a summary. Phase~7 returns seven prior cases from a split-specific pool.
 
-The constraints that shaped my architecture were a 50M--300M parameter cap, no external corpora, a Tesla T4 memory budget, and strict span matching for NER. I did not train a single multi-task net and did not pipe Phase-2/3 outputs into later phases, because an offset error would propagate. I did not use public checkpoints or LLM APIs.
+The constraints that shaped my architecture were a 50M--300M parameter cap, no external corpora, a Tesla T4 memory budget, and strict span matching for NER. I did not train a single multi-task net and did not pipe Phase-2/3 outputs into later phases, because an offset error would propagate. I did not use public checkpoints or LLM APIs. Code is one starter-style notebook per phase at \url{\githuburl}.
 
 \section{Data Analysis and Preprocessing}
 \subsection{Sources and official splits}
@@ -148,34 +148,45 @@ My \textbf{encoder--decoder} uses width 768, six bidirectional encoder blocks an
 
 My \textbf{efficient} model (width 1024, 10 layers) is the body I copied into most later phases. Rotary positions~\cite{su2024roformer} replace a learned table so relative distance is in the attention logits. RMSNorm replaces LayerNorm. The FFN is SwiGLU~\cite{shazeer2020glu} with an expansion that keeps the count near 118M. Grouped-query attention (16 query heads, 4 KV heads)~\cite{ainslie2023gqa} shrinks the KV cache on T4 without dropping to multi-query.
 
-I trained a custom BPE~\cite{sennrich2016bpe} on a sample from all four dumps. A pair is merged only if it occurs at least twice; the score is Dice-weighted, $2C(xy)^2/(C(x)+C(y))$, so merges prefer cohesive legal pieces rather than fragments of ``the''. Bytes 0--255 are always in the vocab. I train with next-token cross-entropy, AdamW, block 1024, drawing blocks from the 50/25/15/10 mix above. I decode greedily and stop at EOS instead of padding to a fixed word count.
+I trained a custom BPE~\cite{sennrich2016bpe} on a sample from all four dumps. A pair is merged only if it occurs at least twice; the score is Dice-weighted, $2C(xy)^2/(C(x)+C(y))$, so merges prefer cohesive legal pieces rather than fragments of ``the''. Bytes 0--255 are always in the vocab. I train with next-token cross-entropy, AdamW, block 1024, drawing blocks from the 50/25/15/10 mix above. I decode greedily and stop at EOS instead of padding to a fixed word count. In plain terms: the model always picks the most likely next token, and I cut the continuation when it emits the end marker, then keep at most 128 words.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\linewidth]{p1_loss_grid.png}
+\caption{Phase-1 train and validation loss. Decoder and hybrid were shorter runs ($\approx$2k steps); efficient and encoder--decoder ran longer ($\approx$12k). Validation tracks training on every body. I copied \emph{efficient} into most later heads and reused the encoder--decoder for extractive Phase~6.}
+\label{fig:p1loss}
+\end{figure}
 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
   font=\scriptsize,
-  box/.style={draw, rounded corners=2pt, align=center, inner sep=3.5pt, minimum width=2.15cm, minimum height=0.8cm},
+  box/.style={draw, rounded corners=2pt, align=center, inner sep=3.2pt, minimum width=1.95cm, minimum height=0.78cm},
   arr/.style={-{Latex}, thick}
 ]
 \node[box, fill=blue!8] (tok) {Legal BPE\\8192};
-\node[box, fill=orange!15, right=0.32cm of tok] (dec) {decoder\\1024$\times$8};
-\node[box, fill=orange!15, right=0.28cm of dec] (hyb) {hybrid\\win.\ 256};
-\node[box, fill=orange!15, right=0.28cm of hyb] (eff) {efficient\\RoPE+GQA};
-\node[box, fill=orange!15, right=0.28cm of eff] (enc) {encdec\\768$\times$6};
-\node[box, fill=green!12, below=0.55cm of dec] (p2) {P2 CRF NER};
-\node[box, fill=green!12, below=0.55cm of hyb] (p3) {P3 BiLSTM};
-\node[box, fill=green!12, below=0.55cm of eff] (p4) {P4 windows};
-\node[box, fill=green!12, below=0.55cm of enc] (p5) {P5 labels};
-\node[box, fill=green!12, below=1.55cm of hyb] (p6) {P6 sentences};
-\node[box, fill=green!12, below=1.55cm of eff] (p7) {P7 first-stage};
+\node[box, fill=orange!15, right=0.28cm of tok] (dec) {decoder};
+\node[box, fill=orange!15, right=0.22cm of dec] (hyb) {hybrid};
+\node[box, fill=orange!20, right=0.22cm of hyb] (eff) {\textbf{efficient}};
+\node[box, fill=orange!15, right=0.22cm of eff] (enc) {encdec};
+\node[box, fill=green!12, below=0.5cm of dec] (p2) {P2 NER+CRF};
+\node[box, fill=green!12, below=0.5cm of hyb] (p3) {P3 BiLSTM};
+\node[box, fill=green!12, below=0.5cm of eff] (p4) {P4 windows};
+\node[box, fill=green!12, below=0.5cm of enc] (p5) {P5 blend};
+\node[box, fill=green!12, below=1.45cm of hyb] (p6) {P6 extract 720w};
+\node[box, fill=green!12, below=1.45cm of eff] (p7) {P7 8k TF-IDF};
 \draw[arr] (tok) -- (dec);
 \draw[arr] (tok) -- (hyb);
 \draw[arr] (tok) -- (eff);
 \draw[arr] (tok) -- (enc);
-\foreach \s/\t in {dec/p2, hyb/p3, eff/p4, enc/p5, eff/p6, eff/p7}
-  \draw[arr] (\s) -- (\t);
+\draw[arr] (eff) -- (p2);
+\draw[arr] (eff) -- (p3);
+\draw[arr] (eff) -- (p4);
+\draw[arr] (eff) -- (p5);
+\draw[arr] (enc) -- (p6);
+\draw[arr] (tok) |- (p7);
 \end{tikzpicture}
-\caption{The BPE and four Phase-1 backbones I trained, and the seven heads I adapted separately. I did not use a multi-task trunk.}
+\caption{Shared BPE and four Phase-1 bodies. Selected serving path: efficient for Phases~2--5, encoder--decoder extractive for Phase~6, lexical TF-IDF for Phase~7. The other bodies were PEFT and distillation vehicles, not a multi-task trunk.}
 \label{fig:system}
 \end{figure}
 
@@ -187,22 +198,48 @@ h = \bigl(I + (\alpha/r)\,BA\bigr)Wx,
 with $B$ initialised at zero so the first step matches the frozen LM; LoRA~\cite{hu2022lora}; Houlsby adapters; partial unfreezing of the last $k$ blocks; BitFit; and response distillation from the efficient teacher into an encoder--decoder copy. I ran LoRMA on at least one architecture in every task phase. I used full fine-tuning of the efficient body only for NER, where the T4 still fits.
 
 \subsection{Phase 2 --- Legal NER}
-My head is token classification on BPE ids, then reconstruction of character spans from stored offsets---not a word BiLSTM that would re-tokenise the line. Each token carries a BIO tag; a linear-chain CRF~\cite{lafferty2001crf} on that sequence forbids I-X after B-Y. I decode with Viterbi. Because a judgment is longer than 1024 tokens, I encode overlapping windows independently and keep the higher-scoring copy of a duplicate span. A light post-process attaches APP to an adjacent person-like mention and strips punctuation. I selected an average of two efficient full-FT+CRF seeds. The required PEFT set I submitted is efficient LoRMA, decoder full FT, hybrid LoRA, and encdec distillation; distillation failed when the distilled encoder--decoder did not inherit the offset tables.
+The scorer matches character intervals on the original string. So I never retokenise into words. I tag each BPE piece with a BIO label, then turn those tags back into \texttt{[start, end)} using offsets stored at encode time. A linear-chain CRF~\cite{lafferty2001crf} forbids illegal jumps such as \texttt{I-DATE} after \texttt{B-COURT}; Viterbi finds the best legal path. Judgments are longer than 1024 tokens, so I slide overlapping windows and keep the higher-scoring copy of a duplicate span. A light cleanup attaches APP to a neighbouring person-like mention and strips stray punctuation.
+
+\textbf{Selected model.} Efficient body, \emph{full} fine-tune plus CRF, average of seeds 42 and 7. Full FT moved names that LoRMA left frozen. The required PEFT set I still submitted is efficient LoRMA, decoder full FT, hybrid LoRA, and encdec distillation; distillation failed when the distilled encoder--decoder did not inherit the offset tables.
 
 \subsection{Phase 3 --- Rhetorical roles}
-I encode each official sentence with the Phase-1 model (mean pool of non-pad hidden states). A BiLSTM over that sentence sequence, then a CRF, predicts one of thirteen roles, so left/right context is the rest of the judgment rather than extra tokens inside the sentence encoder. Under LoRMA I freeze the sentence encoder; only the low-rank factors, the BiLSTM and the CRF train at full rate. I train corporate-law and IT documents jointly on the shared role set. I put a rarity bias on Dissent and PrecedentOverruled in the CRF potential. The other PEFT methods I submitted are decoder IA$^3$ and hybrid LoRA; for distillation I trained an encoder--decoder copy from the efficient LoRMA teacher.
+The unit is an official sentence, not a token. I mean-pool the Phase-1 hidden states of that sentence, so the LM is a sentence encoder. A BiLSTM then reads the whole judgment as a sequence of sentence vectors, and a CRF picks one of thirteen roles. Left/right context is therefore neighbouring sentences (Fact vs Argument), not extra subwords inside one sentence. Under LoRMA I freeze the sentence encoder; only the low-rank factors, the BiLSTM and the CRF train at full rate. Corporate-law and IT documents share the role set. I add a positive bias on Dissent and PrecedentOverruled in the CRF, because those labels are almost absent.
+
+\textbf{Selected model.} Efficient LoRMA + BiLSTM-CRF + rarity bias. Other PEFT zips: decoder IA$^3$, hybrid LoRA, and an encoder--decoder copy distilled from the efficient LoRMA teacher.
 
 \subsection{Phase 4 --- Court judgment prediction}
-I pack a case as several 256-token windows spread from head to tail, with extra mass on the ending. I mean-pool hidden states, a two-way linear head produces a logit, and I choose the cut on dev macro-F1 (accuracy is the wrong target on a two-class problem). I also encode the last $\approx$100 words as a bag-of-words ``ending cue'' and concatenate it to the neural logit, because the holding is usually written there. Partial FT unfreezes only the last transformer blocks of the efficient body so the T4 can keep a batch of four windows. I also submitted hybrid adapters and decoder BitFit; for distillation I used the encoder--decoder.
+The holding is usually on the last page, so a 512-token head crop deletes the signal. I pack a case as several 256-token windows from head to tail, with extra mass on the ending. I mean-pool each window, a two-way linear head produces a logit, and I choose the decision cut on dev macro-F1 (accuracy is the wrong target on a two-class problem). I also encode the last $\approx$100 words as a bag-of-words ``ending cue'' and add it to the neural logit.
+
+\textbf{Selected model.} Efficient body with only the last transformer blocks unfrozen (partial FT), plus the ending cue. That fits a batch of windows on a T4. I also submitted hybrid adapters, decoder BitFit, efficient LoRMA, and encoder--decoder distillation.
 
 \subsection{Phase 5 --- Statute identification}
-I encode up to six 256-token windows. I add a per-label attention head over tokens to a mean-pooled linear path whose bias is the label-frequency prior: each of the 100 IDs has its own query vector rather than a shared 100-way softmax. Loss is binary cross-entropy. I replace empty predictions by the label with the largest score/threshold ratio. I fit thresholds per label on a two-fold split of dev, because a single cut of 0.5 cannot serve both the head and the tail of the frequency histogram. Independently I train a TF-IDF + per-label logistic regression on the same corpus (statute strings are masked, so this is not a leak of section numbers). My selected zip blends the neural logits with the linear model. The four-arch PEFT set I submitted is efficient LoRMA, decoder partial, hybrid adapters, and encdec distillation.
+Mentions of the 100 statutes are stripped, so the model cannot copy a section number. I encode up to six 256-token windows of the efficient body. Each statute ID has its own query vector over tokens, plus a mean-pooled linear path whose bias is the label-frequency prior---not a shared 100-way softmax. Loss is binary cross-entropy. Empty predictions become the label with the largest score/threshold ratio. I fit a threshold \emph{per label} on a two-fold split of dev: a global cut of 0.5 cannot serve both frequent and rare IDs. Independently I train TF-IDF + per-label logistic regression on the same masked text (that is not a leak of section numbers).
+
+\textbf{Selected model.} A blend of those neural logits with the TF-IDF model, then the per-label thresholds. Figure~\ref{fig:p5p6} shows why I serve the blend: PEFT-only heads sit well below it. The four-arch PEFT set I submitted is efficient LoRMA, decoder partial, hybrid adapters, and encdec distillation.
 
 \subsection{Phase 6 --- Summarization}
-I train causal models as document + BOS + summary with loss only on summary tokens. The encoder--decoder encodes the judgment and decodes the summary (I do \emph{not} reuse its Phase-1 \texttt{forward} split). That abstractive path is fluent but free to invent a holding. I instead rank source sentences from encoder--decoder hidden states and emit an extractive summary with a 720-word budget---length control is the budget, not a coverage penalty. Sentence scores are a linear map of the pooled hidden state; greedy selection adds a sentence if it still fits the budget. I also ran LoRMA, partial FT, adapters and KD on the abstractive path to meet the PEFT requirement.
+I did train an abstractive path: causal models see document + BOS + summary with loss only on summary tokens; the encoder--decoder encodes the judgment and decodes the summary (I do \emph{not} reuse its Phase-1 half-block \texttt{forward}). That path is fluent but free to invent a holding. Gold summaries overlap the source, so I instead \emph{select} source sentences. I embed sentences with the encoder--decoder, score them by similarity to the document vector plus position (head/tail) plus lexical cues (\texttt{held}, \texttt{dismissed}), and greedily add a sentence if the 720-word budget still fits. A few head and tail sentences are forced so the holding is not dropped. Length control \emph{is} that budget.
+
+\textbf{Selected model.} Encoder--decoder extractive ranker, 720 words. Figure~\ref{fig:p5p6} compares it with a 640-word extract and with abstractive LoRMA/KD on a local overlap proxy; official BERTScore is Table~\ref{tab:leaderboard}. I still ran LoRMA, partial FT, adapters and KD on the abstractive path to meet the PEFT requirement.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\linewidth]{p5p6_kaggle.png}
+\caption{Architecture checks for Phases~5 and~6, not the official board. Left: local honest macro-F1 of the TF-IDF$\oplus$efficient blend versus PEFT-only heads. Right: local ROUGE-style overlap of extractive 720/640-word selectors versus abstractive LoRMA and KD. Official metrics remain Table~\ref{tab:leaderboard}.}
+\label{fig:p5p6}
+\end{figure}
 
 \subsection{Phase 7 --- Prior-case retrieval}
-My first stage is a split-specific TF-IDF index (word $n$-grams 1--3, 400k features, sublinear TF) over an 8k-word clip of each document. Cosine scores the query against the pool, I remove the query's own ID, and I return seven IDs. I z-score a small citation-span field and a 1200-word head field and add them with small coefficients; they do not replace the first stage. I also implemented dual-encoder InfoNCE on 4$\times$256 windows and a Phase-1 pair (cross) encoder that reorders only the TF-IDF top 20--30, to meet the neural/PEFT requirement. They read too little of a name-masked judgment to override a lexical list, so I kept them as ablations rather than the serving path.
+Queries and candidates are long, name-masked judgments. I clip each document to 8\,000 words (two-thirds head, one-third tail), build a split-specific TF-IDF index (word $n$-grams 1--3, 400k features, sublinear TF), score cosine against the pool, drop the query's own ID, and return seven IDs. A citation-span field and a 1200-word head field are z-scored and added with small weights; they nudge the first stage, they do not replace it.
+
+\textbf{Selected model.} That 8k TF-IDF + cite/head blend. Figure~\ref{fig:p7} is a development snapshot: stretching the clip to 12k or shrinking it to 3k does not beat 8k+fields, while a dual-encoder and a pair encoder that \emph{overwrite} the lexical list fall far behind. I still trained those neural jobs (InfoNCE on 4$\times$256 windows; a Phase-1 pair encoder on the TF-IDF top 20--30) to meet the PEFT/neural requirement, and kept them as ablations.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\linewidth]{p7_ablation.png}
+\caption{Phase-7 architecture snapshot during development (not the official 0.4519 in Table~\ref{tab:leaderboard}). Lexical 8k + cite/head is the serving path; dual-encoder and pair-cross-encoder rerankers that replace the list do not.}
+\label{fig:p7}
+\end{figure}
 
 \section{Experiments and Implementation Details}
 \subsection{Compute and training protocol}
@@ -234,12 +271,12 @@ I always hold out a subset of public train/dev. I run the official scripts under
 I changed one factor at a time: Dice BPE versus count BPE; head+tail packing versus a cropped head; per-label versus global statute thresholds; extractive sentence rank versus abstractive continuation; TF-IDF first stage versus a dual-encoder or pair encoder on the same backbone; LoRMA versus full FT on NER. I kept the negative ablations in the code tree (pair rerank that overwrites the lexical list; 12k-word PCR that overfits 118 queries; a 400-word NER cutoff).
 
 \section{Results}
-Table~\ref{tab:leaderboard} is the official record. Table~\ref{tab:variants} names the architecture of the zip I selected and of one runner-up, without repeating the leaderboard. I used the efficient GQA decoder as the default neural body. Where the task is matching long, masked documents, I serve a linear model on the same corpus and keep the Phase-1 net as a PEFT/KD vehicle.
+Table~\ref{tab:leaderboard} is the official record. Table~\ref{tab:variants} names the architecture I selected and one runner-up. I used the efficient GQA decoder as the default neural body. Where the task is matching long, masked documents, I serve a linear or extractive system on the same corpus and keep the Phase-1 net as a PEFT/KD vehicle (Figure~\ref{fig:gap}).
 
 \begin{table}[H]
 \centering
 \small
-\caption{Selected architecture and a runner-up. Numbers live in Table~\ref{tab:leaderboard}.}
+\caption{Selected architecture and a runner-up. Official numbers live in Table~\ref{tab:leaderboard}.}
 \label{tab:variants}
 \begin{tabular}{cll}
 \toprule
@@ -258,17 +295,9 @@ Phase & Selected architecture & Runner-up \\
 
 \begin{figure}[H]
 \centering
-\begin{subfigure}[t]{0.49\textwidth}
-\includegraphics[width=\linewidth]{efficient_loss.png}
-\caption{Efficient (selected body)}
-\end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.49\textwidth}
-\includegraphics[width=\linewidth]{encoder_decoder_loss.png}
-\caption{Encoder--decoder}
-\end{subfigure}
-\caption{Phase-1 train and validation loss on T4 ($\approx$12k steps). Validation tracks training; these are the two bodies I reused downstream.}
-\label{fig:p1loss}
+\includegraphics[width=0.88\linewidth]{transfer_gap.png}
+\caption{Where a from-scratch 118M LM is a weak matcher on its own. Bars are local or board snapshots of the \emph{neural-only} PEFT path versus the selected TF-IDF/extractive system. Official selected metrics are Table~\ref{tab:leaderboard}.}
+\label{fig:gap}
 \end{figure}
 
 \section{Error Analysis and Discussion}
@@ -282,7 +311,7 @@ ROUGE-L and BERTScore reward overlap with a hidden reference, not legal correctn
 The 1024-token block and the ban on extra corpora are my ceiling. Under the spec, the next architectural move I would try is a pair scorer that \emph{adds} a feature to TF-IDF rather than replacing the list, and a Phase-6 selector that uses Phase-3 roles as a skeleton. I would not pipeline NER into retrieval until offsets are audited.
 
 \subsection{Surprising findings}
-I found that a from-scratch 118M model is a usable token encoder (NER, roles, judgment windows) and a weak semantic matcher on 8k-word name-masked text. That is why my extractive selector beat abstractive continuation, and why I kept a lexical first stage as the PCR serving path even after I trained LoRMA dual-encoders and pair encoders.
+I found that a from-scratch 118M model is a usable token encoder (NER, roles, judgment windows) and a weak semantic matcher on 8k-word name-masked text (Figure~\ref{fig:gap}). That is why my extractive selector beat abstractive continuation, and why I kept a lexical first stage as the PCR serving path even after I trained LoRMA dual-encoders and pair encoders.
 
 \section{Conclusion}
 I delivered four in-house legal LMs and seven separately adapted heads. The architectural choices that mattered for me were the efficient GQA body, character-accurate BPE offsets, window packing for long judgments, per-label heads for 100 statutes, extractive length control, and a lexical first stage for retrieval. The choices that did not were a cropped-head encoder, abstractive summarization at this size, and a neural ranker that overwrites TF-IDF. I would keep a compact legal LM under a parameter and data lock as an encoder; it is not, by itself, a retrieval model.
@@ -326,7 +355,7 @@ Answer: Yes. Official CS-781 starter and evaluators; Hugging Face card~\cite{cs7
 \noindent
 \textbf{Q4.} Apart from any permitted LLM use, what was \emph{your} contribution? In 8--12 sentences describe your own understanding, architecture decisions, implementation, experiments, and analysis. Name at least two things you tried that failed and what you concluded from them.
 
-I specified the four Phase-1 architectures (causal decoder, windowed hybrid, GQA-efficient, encoder--decoder), the Dice-weighted BPE, and the rule that every later phase must load those weights. I chose LoRMA as the compulsory PEFT method, CRF heads for sequence tasks, window packing for long judgments, and per-label thresholds for 100 statutes. I ran the Codabench loop: local evaluator, zip, upload, and the decision to keep or drop a zip. I rejected public legal BERT once the spec forbade it. Two failures that changed the design: a 400-word NER BiLSTM that never saw late entities, which forced character-aligned sliding windows; and dual-encoder / pair-encoder PCR that overwrote a lexical list it could not improve. A third failure, a 12k-word PCR clip, overfit 118 dev queries. Extractive 720-word selection was my decision after abstractive SFT stalled. The conclusions in this report are those architectural outcomes.
+I specified the four Phase-1 architectures (causal decoder, windowed hybrid, GQA-efficient, encoder--decoder), the Dice-weighted BPE, and the rule that every later phase must load those weights. I chose LoRMA as the compulsory PEFT method, CRF heads for sequence tasks, window packing for long judgments, and per-label thresholds for 100 statutes. I ran the Codabench loop: local evaluator, zip, upload, and the decision to keep or drop a system. I rejected public legal BERT once the spec forbade it. Two failures that changed the design: a 400-word NER BiLSTM that never saw late entities, which forced character-aligned sliding windows; and dual-encoder / pair-encoder PCR that overwrote a lexical list it could not improve. A third failure, a 12k-word PCR clip, overfit 118 dev queries. Extractive 720-word selection was my decision after abstractive SFT stalled. The conclusions in this report are those architectural outcomes.
 
 \bibliographystyle{ieeetr}
 \bibliography{references}
