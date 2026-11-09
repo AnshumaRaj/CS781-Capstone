@@ -19,7 +19,7 @@ report/CS781-CP-Anshuman-Raj-240148-report.pdf
 | `phase6/Phase6_Summary.ipynb` | 6 Summarization | encdec extractive, 720-word budget |
 | `phase7/Phase7_PCR.ipynb` | 7 Prior-case retrieval | 8k-word TF-IDF + cite/head fields |
 
-Each `phaseN/` folder holds that phase’s source (and earlier modules it imports). No Codabench `submission.zip` files.
+Each `phaseN/` folder is **only the selected run** for that phase: one notebook plus the `.py` files it imports. No other attempts, no Codabench zips.
 
 Keep `RUN_TRAINING = False` unless you are on a Kaggle T4 with the dataset and a Phase-1 checkpoint.
 

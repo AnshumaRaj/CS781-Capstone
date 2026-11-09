@@ -21,7 +21,7 @@ report/CS781-CP-Anshuman-Raj-240148-report.pdf
 | 6 Summary | 22 | `code/phase6/Phase6_Summary.ipynb` | `phase6_summ.py` encdec extractive 720w |
 | 7 PCR | 33 | `code/phase7/Phase7_PCR.ipynb` | `phase7_rerank.py` 8k TF-IDF + cite/head |
 
-No Codabench `submission.zip` files. Each `code/phaseN/` folder is the source for that phase.
+Each `code/phaseN/` folder is **only the selected run**: one notebook plus the `.py` files it imports. No other attempts, no Codabench zips.
 
 ```
 pip install -r code/phase1/requirements.txt
