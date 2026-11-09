@@ -1,35 +1,39 @@
-# CS781 Capstone — code (starter layout)
+# CS781 Capstone
 
 **Anshuman Raj · 240148 · `anshumanr24@iitk.ac.in` · Codabench `a_240148`**
 
-Each phase is one notebook, numbered like the official Phase-1 starter (markdown heading, then a short cell). The notebooks import the `.py` files in this same folder. They are **not** the course GPT-2 starter: tokenizer and models are trained from scratch.
+In-house legal NLP, phases 1–7. Tokenizer and models are trained from scratch (no InLegalBERT, no public checkpoints, no LLM APIs for training).
 
-| Open this | Phase | Selected architecture |
-|---|---|---|
-| `Phase1_LegalLM.ipynb` | 1 Legal LM | efficient (RoPE, GQA, SwiGLU), greedy + EOS |
-| `Phase2_NER.ipynb` | 2 NER | efficient full-FT + CRF |
-| `Phase3_Roles.ipynb` | 3 Rhetorical roles | efficient LoRMA + BiLSTM-CRF |
-| `Phase4_CJPE.ipynb` | 4 Judgment prediction | efficient partial FT, windows + ending cue |
-| `Phase5_Statutes.ipynb` | 5 Statute IDs | per-label head blended with TF-IDF |
-| `Phase6_Summary.ipynb` | 6 Summarization | encdec extractive, 720-word budget |
-| `Phase7_PCR.ipynb` | 7 Prior-case retrieval | 8k-word TF-IDF + cite/head fields |
+Repo: https://github.com/AnshumaRaj/CS781-Capstone
+
+## Layout
+
+| Path | What it is |
+|---|---|
+| `code/Phase1_LegalLM.ipynb` … `Phase7_PCR.ipynb` | Viva notebooks (starter cell layout) |
+| `code/*.py` | Modules the notebooks import |
+| `code/best_submissions/` | **One selected Codabench zip per phase** (Hello IITK uses only these) |
+| `code/all_submissions/` | Every other Codabench / local-run zip from the competition |
+| `code/evaluators/` | Local zip checkers |
+| `report/` | LaTeX, figures, PDF |
+
+The Hello IITK zip is `code/` + `report/` at the zip root and contains **only** the seven best zips. Historical attempts live on this GitHub repo.
+
+## Selected model per phase
+
+| Phase | Rank (9 Nov 2026) | Zip | Architecture |
+|---|---|---|---|
+| 1 Legal LM | 55 | `code/best_submissions/phase1_submission.zip` | efficient, greedy + EOS |
+| 2 NER | 51 | `code/best_submissions/phase2_submission.zip` | efficient full-FT + CRF, 2 seeds |
+| 3 Roles | 39 | `code/best_submissions/phase3_submission.zip` | efficient LoRMA + BiLSTM-CRF |
+| 4 CJPE | 96 | `code/best_submissions/phase4_submission.zip` | efficient partial + ending cue |
+| 5 Statutes | 23 | `code/best_submissions/phase5_submission.zip` | TF-IDF ⊕ efficient windows |
+| 6 Summary | 22 | `code/best_submissions/phase6_submission.zip` | encdec extractive, 720 words |
+| 7 PCR | 33 | `code/best_submissions/phase7_submission.zip` | 8k TF-IDF + cite/head |
+
+```
+pip install -r code/requirements.txt
+jupyter notebook code/Phase1_LegalLM.ipynb
+```
 
 Keep `RUN_TRAINING = False` unless you are on a Kaggle T4 with the dataset and a Phase-1 checkpoint.
-
-Shared modules next to the notebooks:
-
-- `legal_bpe.py` — Dice-weighted byte BPE, vocab 8192
-- `phase1_models.py` — decoder, hybrid, efficient, encdec (`build_model` enforces 50M–300M)
-- `phase2_lner.py` — LoRMA, CRF, character-aligned NER
-- `phase3_rr_own.py` — sentence BiLSTM-CRF
-- `phase4_own.py` — window classifier
-- `phase5_tfidf.py`, `phase5_lsi.py`, `phase5_blend.py` — statute blend
-- `phase6_summ.py` — extractive selector
-- `phase7_rerank.py` — PCR first stage
-
-`evaluators/` checks a `prediction.json` zip. `best_submissions/` holds the selected Codabench zip for each phase.
-
-```
-pip install -r requirements.txt
-jupyter notebook Phase1_LegalLM.ipynb
-```
