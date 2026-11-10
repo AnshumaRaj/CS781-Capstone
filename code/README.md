@@ -14,6 +14,8 @@ report/CS781-CP-Anshuman-Raj-240148-report.pdf
 
 Keep `RUN_TRAINING = False` unless you are on a Kaggle T4.
 
+Other Codabench attempts are on GitHub only, under `attempts/phase1` … `attempts/phase7` (source, not prediction zips).
+
 ```
 pip install -r requirements.txt
 jupyter notebook phase1/Phase1_LegalLM.ipynb
